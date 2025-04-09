@@ -1,4 +1,4 @@
-rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/Gorin CMBN F4 project/RawData/';
+rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/RawData/';
 
 allRawDataFolder = dir(rootDir); %pulls everything from the raw data folder (folders and files) --> structure array
 subjectFolders = allRawDataFolder([allRawDataFolder.isdir]); 

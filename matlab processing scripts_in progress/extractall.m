@@ -2,10 +2,10 @@
 %organizes them into 2 tables with different formats 
 
 % Where the subject folders are
-rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/Gorin CMBN F4 project/RawData';
+rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/RawData';
 
 % Where the output excel file is 
-outputDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/Gorin CMBN F4 project/DataTables';
+outputDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/gorin_CMBN_F4_project/DataTables';
 
 excelOutput = fullfile(outputDir, 'ExtractedAllbyDV.xlsx'); %streamlines path to output file
 variables = {'epoch', 'MeanAccuracy', 'MeanHeartRate', 'MeanPupilDiameter', 'MeanSpeedMultiplier', 'SD1', 'SD2', 'SDNN', 'SDratio'};  
@@ -96,7 +96,7 @@ for t = trialsToRun
     end
 end
 
-
+%check and make sure it exists (helped troubleshoot):
 disp('subjectData before writecell to excel:');
 disp(subjectData);
 
