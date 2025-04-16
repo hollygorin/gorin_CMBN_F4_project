@@ -1,3 +1,6 @@
+%this function allows user to input what trials to select or, if no
+%trials are specified, selects them all
+
 function selectedTrials = selectTrials(trials)
 
     arguments
