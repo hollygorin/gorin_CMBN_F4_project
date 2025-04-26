@@ -11,6 +11,9 @@ endTimeHigh = 210519; %time to cut from there on (high range) xxxxx9
 
 rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/RawData/';
 
+%get map from createSubjectIDMap function
+subjectMap = createSubjectIDMap();
+
 %select subjects to process using selectSubject function and prompt for
 %input
 subjInput = input('Enter subject IDs (ie H1, S5...) or press Enter to select all: ', 's');
@@ -33,9 +36,9 @@ for i = 1:length(selectedSubjects)
     end
 
     fileNames = {
-        'Trial4raw_EndlessCarKinematicLog.csv'; 'Trial5raw_EndlessCarKinematicLog.csv'; ...
+        'Trial1raw_EndlessCarKinematicLog.csv'; 'Trial4raw_EndlessCarKinematicLog.csv'; 'Trial5raw_EndlessCarKinematicLog.csv'; ...
         'Trial6raw_EndlessCarKinematicLog.csv'; 'Trial7raw_EndlessCarKinematicLog.csv'; ...
-        'Trial8raw_EndlessCarKinematicLog.csv'; 'Trial4raw_EndlessCarEyeLog.csv'; ...
+        'Trial8raw_EndlessCarKinematicLog.csv'; 'Trial1raw_EndlessCarEyeLog.csv'; 'Trial4raw_EndlessCarEyeLog.csv'; ...
         'Trial5raw_EndlessCarEyeLog.csv'; 'Trial6raw_EndlessCarEyeLog.csv'; ...
         'Trial7raw_EndlessCarEyeLog.csv'; 'Trial8raw_EndlessCarEyeLog.csv'};
     

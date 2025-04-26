@@ -1,10 +1,3 @@
-%ChANGES FROM LAST PUSH:
-    %added RR as byTrialVar
-        %analyzed separately from other matVariables so not in mat filesper subject)
-    %added BL normalized, %HRmax, raw delta from BL, and z score columns for pupil, RR, and HR
-    %created mergeTables function to limit redundancy in joining tables in extractAll
-    %fixed problem with subjF not pulling in right subjVar values
-
 %DESCRIPTION:this script takes the:
     %.mat output files containing filtered, averaged DVs
             %epoch", "MeanAccuracy", "MeanHeartRate", "MeanPupilDiameter", "MeanSpeedMultiplier", "SD1", "SD2", "SDNN", "SDratio

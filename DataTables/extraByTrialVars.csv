@@ -113,3 +113,15 @@ S8,slow+,17.873,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,4
 S8,fast,20.509,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,6
 S8,fast+,15.373,Y,43,2,7,6,7,7,6,5,3,4,3
 S8,mod,19.906,Y,43,2,7,6,7,7,6,5,3,3,5
+S9,baseline,,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,1
+S9,slow,,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,4
+S9,slow+,,Y,50,7,7,7,7,7,1,7,7,3,3
+S9,fast,,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,6
+S9,fast+,,Y,55,7,5,6,7,7,7,4,7,5,2
+S9,mod,,Y,57,7,6,7,7,7,7,5,7,4,5
+S10,baseline,,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,1
+S10,slow,,Y,54,5,7,7,7,7,7,7,7,3,3
+S10,slow+,,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,4
+S10,fast,,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,4
+S10,fast+,,Y,56,4,7,7,7,7,7,6,7,4,2
+S10,mod,,Y,57,4,7,7,7,7,7,7,7,4,5
