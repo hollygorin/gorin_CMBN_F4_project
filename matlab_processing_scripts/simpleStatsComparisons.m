@@ -4,20 +4,22 @@
         %norm data by S, M, F
     %between subjects by group
 
+load('/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/gorin_CMBN_F4_project/DataTables/StatsFormatTable.mat');
+
 % Conditions
-speedConditions = ["baseline", "slow", "mod", "fast"];
+%speedConditionsWithBL = ["baseline", "slow", "mod", "fast"];
     %for raw data and %HRmax comparisons
-speedConditionsNorm = ["slow", "mod", "fast"];
+speedConditionsNoBL = ["slow", "mod", "fast"];
     %for data norm to BL comparisons
 
 % makes tables for data of interest
-anovaData = statsFormatTable(ismember(statsFormatTable.Condition, speedConditions), :);
-anovaDataNorm = statsFormatTable(ismember(statsFormatTable.Condition, speedConditionsNorm), :);
+%anovaDataWithBL = statsFormatTable(ismember(statsFormatTable.Condition, speedConditions), :);
+anovaDataNoBL = statsFormatTable(ismember(statsFormatTable.Condition, speedConditionsNoBL), :);
 
 % DVs
-dvNames = {'MeanHeartRate', 'Percent_HR_Max', 'MeanPupilDiameter', 'RR'};
-dvNamesNorm = {'Pupil_normBL', 'RR_normBL'};
+dvNamesWithBL = {'MeanHeartRate', 'Percent_HR_Max', 'MeanPupilDiameter', 'RR'};
+dvNamesNoBL = {'MeanHeartRate', 'Percent_HR_Max', 'HR_normBL', 'MeanPupilDiameter', 'Pupil_normBL', 'RR_normBL'};
 
 % Run ANOVAs
-runDVANOVAs(dvNames, anovaData, speedConditions);
-runDVANOVAs(dvNamesNorm, anovaDataNorm, speedConditionsNorm);
+%runDVANOVAs(dvNamesWithBL, anovaDataWithBL, speedConditions);
+runDVANOVAs(dvNamesNoBL, anovaDataNoBL, speedConditionsNoBL);
