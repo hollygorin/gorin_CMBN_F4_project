@@ -2,10 +2,10 @@
 
 function SubjectIDmap = createSubjectIDMap()
 
-    rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/RawData';
-        %where subject folders are
-    
-    
+    thesisDataAnalysisSettings;  % call script with directories/variables
+
+    rootDir = rawDataFolderDir;
+        %where subject folders are  
     
     allRawDataFolder = dir(rootDir); 
         %pulls everything from the raw data folder (folders and files) --> structure array

@@ -1,9 +1,9 @@
 function runDVANOVAs(dvNames, anovaData, speedConditions)
     %inputs:
         %dvNames = DVs to run ANOVAS on
-        %anovaData = subset of StatsFormatTable with desired
+        %anovaData = subset of integratedDataTable with desired
             %speed conditions    
-    %this function runs mixed methods ANOVAS on the data stored in StatsFormatTable (created by extractall script)
+    %this function runs mixed methods ANOVAS on the data stored in integratedDataTable (created by extractall script)
     %also runs post-hoc t-tests if anova effect p<0.05
         %repeated measures with turkey-kramer correction for significant effect of speed conditions
     %It also checks assumptions for mixed methods ANOVA (within and between subjects) and

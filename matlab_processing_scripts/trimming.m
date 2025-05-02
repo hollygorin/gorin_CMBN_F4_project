@@ -3,13 +3,17 @@
 %then saves the trimmed data in a new .csv file with matching column
 %headers
 
-%Time range to cut out from beginning
-startKeepTime = 29999; %time frame from beginning to cut out
-endTimeLow = 210510; %time to cut from there on (low range) xxxxx0
-endTimeHigh = 210519; %time to cut from there on (high range) xxxxx9
-%below will find first ms time between endTimeLow and endTimeHigh and cut from there on
+thesisDataAnalysisSettings;  % call script with directories/variables
+    %defines startKeepTime, endTimeLow, and endTimeHigh
+    %defines rawFixedSpeedFileNames
 
-rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/RawData/';
+%Time frame to keep is defined in thesisDataAnalysisSettings
+    %startKeepTime = time frame from beginning to cut out
+    %endTimeLow = time to cut from there on (low range) xxxxx0
+    %endTimeHigh = time to cut from there on (high range) xxxxx9
+        %below will find first ms time between endTimeLow and endTimeHigh and cut from there on
+
+rootDir = rawDataFolderDir;
 
 %get map from createSubjectIDMap function
 subjectMap = createSubjectIDMap();
@@ -35,12 +39,7 @@ for i = 1:length(selectedSubjects)
         mkdir(outputFolder);
     end
 
-    fileNames = {
-        'Trial1raw_EndlessCarKinematicLog.csv'; 'Trial4raw_EndlessCarKinematicLog.csv'; 'Trial5raw_EndlessCarKinematicLog.csv'; ...
-        'Trial6raw_EndlessCarKinematicLog.csv'; 'Trial7raw_EndlessCarKinematicLog.csv'; ...
-        'Trial8raw_EndlessCarKinematicLog.csv'; 'Trial1raw_EndlessCarEyeLog.csv'; 'Trial4raw_EndlessCarEyeLog.csv'; ...
-        'Trial5raw_EndlessCarEyeLog.csv'; 'Trial6raw_EndlessCarEyeLog.csv'; ...
-        'Trial7raw_EndlessCarEyeLog.csv'; 'Trial8raw_EndlessCarEyeLog.csv'};
+    %rawFixedSpeedFileNames defined in thesisDataAnalysis
     
     eyeHeaderLine = 'DateTime,Milliseconds,Car X,Car Y,Gaze X,Gaze Y,IsInGazeArea?,Pupil Diameter(mm),Chosen Palette,Spawn Time Between Palettes';
         %so it can put the same exact headers back on the cut down eye log files
@@ -49,9 +48,9 @@ for i = 1:length(selectedSubjects)
   
     
     %for all 10 raw log files:
-    for f = 1:length(fileNames)
-        inputFile = fullfile(subjectFolder, fileNames{f});
-        newFile = fullfile(outputFolder, strrep(fileNames{f}, 'raw', ''));
+    for f = 1:length(rawFixedSpeedFileNames)
+        inputFile = fullfile(subjectFolder, rawFixedSpeedFileNames{f});
+        newFile = fullfile(outputFolder, strrep(rawFixedSpeedFileNames{f}, 'raw', ''));
             %make new file names without _raw
       
         dataTable = readtable(inputFile, 'HeaderLines', 1);
@@ -88,9 +87,9 @@ for i = 1:length(selectedSubjects)
          writetable(cutData, newFile, 'WriteVariableNames', false);
     
       %tell it which first row to assign to the new file
-        if contains(fileNames{f}, 'EyeLog')
+        if contains(rawFixedSpeedFileNames{f}, 'EyeLog')
             expectedHeaders = eyeHeaderLine;
-        elseif contains(fileNames{f}, 'KinematicLog')
+        elseif contains(rawFixedSpeedFileNames{f}, 'KinematicLog')
             expectedHeaders = kinematicHeaderLine;
         end
     

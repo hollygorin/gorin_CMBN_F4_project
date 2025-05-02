@@ -1,86 +1,106 @@
+%changes since last push:
+    %fixed problem with Percent_HR_Max calculations
+    %changed table names for clarity:
+        %statsRowTable --> singleTrialTable
+        %toAddToStatsFormatTable --> single SubjectTable
+        %statsFormatTable --> integratedDataTable
+    %instead of having singleSubjectTable merge with integratedDataTable for every single subject:
+        %changed it so that ech subject run gets added to tempIntegratedDataTable within subject loop
+        %then outside of subject loop tempIntegratedDataTable gets merged with integrtedDataTable
+    %fixed norm and raw delta column creation for pupil, HR, RR
+
 %DESCRIPTION:this script takes the:
     %.mat output files containing filtered, averaged DVs
             %epoch", "MeanAccuracy", "MeanHeartRate", "MeanPupilDiameter", "MeanSpeedMultiplier", "SD1", "SD2", "SDNN", "SDratio
-    %.csv file with extra bySubject variables
-            %subject info: BetaBlocker", "Sex", "DomHand", "Lenses", "Age", "AffHand", "Chronicity",
-            %clinical tests: "BBTdom", "BBTnondom", "MOCA",  "FMA", "BBTa",	"BBTu
-    %.csv file with extra byTrial variables
-            %subjective (Y if subjective assessments administered for that trial)
-            %subjVars (IMI and ISA results);only if subjective = Y
-            %order: that trials were administered
-            %RR
-                 %analyzed separately from other matVariables so not in mat filesper subject)
+    %.csv fileS with extra bySubject (demographics/clinical tests) and byTrial variables
+            %bySubj = demographics and clinical test scores
+            %byTrial
+                %including 'subjective' (Y if subjective assessments administered for that trial) 
+                % subjectiveVars (self report IMI/ISA scores)
+                    %only for trials with subjective = Y
+                %+ order and RR
     %as well as adds additional variables mapped to trial#s and subject IDs
             %trial #, condition, speed category, distractor status per trial
             % Group (subject ID H__ = healthy and S__= CVA
 
-% and organizes them into a long format matlab table
-    %separate exportDatatoFiles script can then export info as:
-        %.csv long format table
-        %wide format excel file (for quick looks and use within lab)
+% and organizes them into integratedDataTable.mat (long format)
+    %ind trial values temp stored in singleTrialRowTable
+    %then merged into singleSubjectDataTable
+    % then all added to final integratedDataTable
 
-%%%1.DEFINE PATHS (where to find input files and where to save output files)
-% Where the subject folders are with .mat files:
-rootDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/RawData/';
+%separate exportDatatoFiles script can then export info as:
+    %.csv long format table
+    %wide format excel file (for quick looks and use within lab)
 
-%Where the extra variables not found in .mat files are:
-%load extra subject-level data:
-extraBySubjVars = readtable('/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/gorin_CMBN_F4_project/DataTables/extraBySubjVars.csv');
+thesisDataAnalysisSettings;  % call script with directories/variables
 
-%load extra trial-level data:
-        %tellsmatlab to import bytrialvars in certain formats when uses readtable (fixes entire column being NaNs)
-opts = detectImportOptions('/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/gorin_CMBN_F4_project/DataTables/extraByTrialVars.csv');
-opts = setvartype(opts, 'Subjective', 'string');  % force it to import as string 
-extraByTrialVars = readtable('/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/gorin_CMBN_F4_project/DataTables/extraByTrialVars.csv', opts);
-
-%change ID and condition from cell arrays to strings so strcmp doesn't fail later 
-extraBySubjVars.ID = strtrim(string(extraBySubjVars.ID));
-extraBySubjVars.Condition = strtrim(string(extraBySubjVars.Condition));
-    %strtrim cleans up extra spaces from csv just in case
-
-extraByTrialVars.ID = strtrim(string(extraByTrialVars.ID));
-extraByTrialVars.Condition = strtrim(string(extraByTrialVars.Condition));
-
-% Where the output files go
-outputDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)/thesis_stuff/data/DataProcessing/gorin_CMBN_F4_project/DataTables';
+%1a.DEFINE PATHS, LOAD INPUT DATA FILES, LOCATE OUTPUT FILE FOLDERS 
+    rootDir = rawDataFolderDir;
+         
+   %Where the output files go
+    outputDir = dataTablesFolderDir;
 
 
-%%%%2.DEFINE VARIABLES, TRIALS, SPEED, DISTRACTOR, and CONDITION for each
-%%%%trial
-matVariables = ["epoch", "MeanAccuracy", "MeanHeartRate", "MeanPupilDiameter", "MeanSpeedMultiplier", "SD1", "SD2", "SDNN", "SDratio"];
-    %changed to string array instead of cell array (which stores character vectors)
-    %reminder string array is ["xxx","xxx"] and cell array is {'xxx','xxx'}
-    %matVariables are just ones pulled from the .mat files
-bySubjVars = ["BetaBlocker", "Sex", "DomHand", "BBTdom", "BBTnondom", "MOCA", "Lenses", "Age", "AffHand", "Chronicity", "FMA", "BBTa",	"BBTu"];
-    %pull in from separate .csv
-    %demographics and clinical testing reults from intake form
-subjTrialVars = ["IMIt", "IMIrelaxed", "IMIattention", "IMIinteresting", "IMItry", "IMIboring", "IMIeffort", "IMIsatisfied", "IMIanxious", "ISA"];
-byTrialVars = ["Subjective", subjTrialVars, "Order", "RR"];
-    %pull in from separate .csv
-    % all subjTrialVars are only assigned to rows where Subjective == yes
-    %subjective and IMI/ISA from subject self report survey
-    %RR analyzed separately and not in .mat file
+   
+    %load extra subject-level data:
+        %stop it from treating AffHand as a numeric var:
+    opts = detectImportOptions(extraBySubjVarsDir);
+    opts = setvartype(opts, 'AffHand', 'string');
+    extraBySubjVars = readtable(extraBySubjVarsDir, opts);  %defined in thesisDataAnalysisSettings
+
+    %load extra trial-level data: specifies to import bytrialvars as string (fixes entire column of NaNs)
+        %opts = settings of how ML should read file
+    opts = detectImportOptions(extraByTrialVarsDir); %defined in thesisDataAnalysisSettings
+            %ML autodetects how it thinks it should be imported
+    opts = setvartype(opts, 'Subjective', 'string');  
+            % force subjective to be read as a string 
+    extraByTrialVars = readtable(extraByTrialVarsDir, opts);
+            %now reads the table following set opts
+
+
+
+%%1b clean input data formatting
+    %change ID and condition from cell arrays to strings so strcmp doesn't fail later 
+    extraBySubjVars.ID = strtrim(string(extraBySubjVars.ID));
+    extraBySubjVars.Condition = strtrim(string(extraBySubjVars.Condition));
+        %strtrim cleans up extra spaces from csv just in case
+    
+    extraByTrialVars.ID = strtrim(string(extraByTrialVars.ID));
+    extraByTrialVars.Condition = strtrim(string(extraByTrialVars.Condition));
+
+
+
+
+%%%%2.DEFINE VARIABLES, TRIALS, SPEED, DISTRACTOR, and CONDITION for each trial
+%variables are string array 
+    %reminder string array is ["xxx","xxx"] 
+    % and cell array is {'xxx','xxx'} and stores character vectors
+
+%matvariables, bySubjVars, subjectiveVars, and byTrialVars defined in thesisDataAnalysisSettings
+    %matVariables = DVs pulled from the .mat files
+    %bySubjVariables = demographics and clinical testing reults; 
+        %pulled from extraBySubjVariables.csv
+    %byTrialVars = subjectiveVars (subjective assessments), Subjective status, order, and RR 
+        %pulled from extraByTrialVars.csv
+        %all subjectiveVars are only assigned to rows where Subjective == yes
+
 mappingVars = ["Trial", "Group", "SpeedCategory", "Distractor", "Condition"];
-    %speedcategory, distrctor, and condition defined in maps below- have patterns to trials
+    %speedcategory, distrctor, and condition maps defined in thesisDataAnalysiSettings
+        %SpeedCategoryMap assigns speed categories to match conditions
+        %DistractorMap assigns speed categories to match conditions
+        %ConditionMap assigns condition descriptors to match conditions
     %group mapped in step 9
     %trial defined during step 4 by user input, then defined as t and added as column
+
 allExpectedVars = unique(["Subject", mappingVars, matVariables, bySubjVars, byTrialVars]);
     %all above combined
 
-SpeedCategoryMap = containers.Map({1, 4, 5, 8, 6, 7}, {'B', 'S', 'S', 'M', 'F', 'F'});
-            %assigns speed categories to match conditions
-DistractorMap    = containers.Map({1, 4, 5, 8, 6, 7}, {'NA','N', 'Y', 'NA','N', 'Y'});
-            %assigns speed categories to match conditions
-ConditionMap    = containers.Map({1, 4, 5, 8, 6, 7}, {'baseline','slow', 'slow+', 'mod','fast', 'fast+'});
-            %assigns condition descriptors to match conditions
-
-trialsOfInterest = [1, 4, 5, 8, 6, 7];
+trialsOfInterest = fixedSpeedTrials;
     %so can use to ignore trials 2, 3, 9 later (irrelevant to this script)
-
+    %fixedSpeedTrials defined in thesisDataAnalysisSettings
 
             
-%%%%3. SUBJECT SELECTION
-%select subjects to process using selectSubject function and prompt for input
+%%%%3. SUBJECT SELECTION (using selectSubject function)
 subjInput = input('Enter subject IDs ie H1 S5...(separated by a space) or press Enter to select all: ', 's');
 if isempty(subjInput)
     selectedSubjects = selectSubject();  % all subjects
@@ -88,14 +108,13 @@ else
     subjInputFormatted = strsplit(strtrim(subjInput)); 
         %strsplit splits by spaces
     selectedSubjects = selectSubject(subjInputFormatted);  % specific ones
-end %of if/else
+end 
 
 %get map from createSubjectIDMap function
 subjectMap = createSubjectIDMap();
 
 
-%%%%%4.TRIAL SELECTION
-%pick which trials from selectTrials function
+%%%%%4.TRIAL SELECTION (using selectTrials function)
 userTrialInput = input('Enter trial numbers ie: 4 5 6... (separated by a space) or hit enter to run all: ', 's');
     %gets rid of specific formatting requirements 
 if isempty(userTrialInput) %if don't specify, then:
@@ -105,42 +124,35 @@ else
         %str2num converts string to numbers
     trialsToRun = intersect(userTrialInputFormatted, trialsOfInterest);
         %run the trials user asks for (makes sure they're the appropriate trials for this script's functions)
-end %of if-else
+end 
 
 
-%%%%%5. SKIP EXPORT (default to only update .mat file)
-%can use separate export mat data file
+%%%5. LOAD and prepare existing integratedDataTable.mat 
+% Load existing integratedDataTable.mat 
+matOutputFile = integratedDataTableDir;
+    load(matOutputFile, 'integratedDataTable');
 
-
-%%%6. LOAD FINAL MATLAB TABLES for stats format for use in matlab
-% Load existing statsFormatTable.mat 
-matOutputFile = fullfile(outputDir, 'StatsFormatTable.mat');
-load(matOutputFile, 'statsFormatTable');
-
-
-%Remove existing subjS and subjF rows (or will add duplicate ones every time)
-statsFormatTable(statsFormatTable.Trial == 4.5 | statsFormatTable.Trial == 6.5, :) = [];
+%Remove existing subjectiveS and subjectiveF rows (or will add duplicates)
+integratedDataTable(integratedDataTable.Trial == 4.5 | integratedDataTable.Trial == 6.5, :) = [];
 
 % Make sure subject and condition is a string and Trial is numeric so no errors w saving
-statsFormatTable.Subject = string(statsFormatTable.Subject);
-statsFormatTable.Trial   = double(statsFormatTable.Trial);
+integratedDataTable.Subject = string(integratedDataTable.Subject);
+integratedDataTable.Trial   = double(integratedDataTable.Trial);
 
-
-
+%6. create tempIntegratedDataTable for all run subject data to be stored in
+    %(added to integratedDataTable at the end)
+tempIntegratedDataTable = cell2table(cell(0, numel(allExpectedVars)), 'VariableNames', allExpectedVars);
 
 %NOW,FOR ALL TRIALS OF SELECTED SUBJECTS (SUBJECT LOOP), 
 for i = 1:length(selectedSubjects) %for each subject selected
     subjectName = selectedSubjects{i};
     subjectPath = fullfile(rootDir, subjectMap(subjectName),'MatlabOutputFiles');
     
-  %%%7. create per subject matlab table (temp- to be added to final table)
+  %%%7. create temp table per each subject (singleSubjectDataTable- to be added to integratedDataTable)
+    singleSubjectDataTable = cell2table(cell(0, numel(allExpectedVars)),'VariableNames', allExpectedVars);
+
     
-    allExpectedVars = unique([ "Subject", mappingVars, matVariables, bySubjVars, byTrialVars ]);
-    addToStatsFormatTable = cell2table(cell(0, numel(allExpectedVars)),'VariableNames', allExpectedVars);
-        %otherwise subject header doesn't get stored as variable names --> error
-        %unique avoids duplicate headers
-    
-    %Then go through each trial (TRIAL LOOP (w/in subject loop) and, for each trial:
+    %Then, for each subject (still nested w/in subject loop) go through each trial (TRIAL LOOP)
 %%%%%%%TRIAL LOOP: 8.load the data and extract DVs
     for t = trialsToRun
         trialFile = fullfile(subjectPath, sprintf('Output_Trial%d.mat', t));
@@ -148,204 +160,177 @@ for i = 1:length(selectedSubjects) %for each subject selected
                 % ie: %d --> integer (ie;t--> '5')
            %loads the .mat files
         
-    if exist(trialFile, 'file')
-        data = load(trialFile,matVariables{:});
-                %load the DVs from the mat files
-        
-   %%%%9 CREATE PER SUBJECT STATS ROWS for non DV data that can be mapped to subject ID or trial
-     %(temp-to be added to per subject toAdd table
-        statsRow = struct();
-            %clears it for each trial
-        statsRow.Subject = string(subjectName);
-        statsRow.Trial = t;
-        conditionName = strtrim(string(ConditionMap(t)));
-
-        if startsWith(subjectName, 'H')
-            statsRow.Group = "H";
-        elseif startsWith(subjectName, "S")
-            statsRow.Group = "CVA";
-        else
-            warning('subject ID does not belong in either group')
-        end
-
-        statsRow.Distractor = string(DistractorMap(t));
-        statsRow.SpeedCategory = string(SpeedCategoryMap(t));
-        statsRow.Condition = string(ConditionMap(t));
-
-    %%%10 CREATE PER SUBJECT STATS ROWS for by subject and by trial variables not found in .mat files 
-        %by subject variables:
-            %reminder bySubjVars = ["BetaBlocker", "Sex", "DomHand", "BBTdom", "BBTnondom", "MOCA", "Lenses", "Age", "AffHand", "Chronicity", "FMA", "BBTa",	"BBTu"];
-        
-        %make sure these are strings bc using strcmp
-        subjectName = strtrim(string(subjectName));
-        
-
-        subjMatchIdx = strcmp(extraBySubjVars.ID, subjectName) & strcmp(extraBySubjVars.Condition, conditionName);
-        rowMatchSubj = extraBySubjVars(subjMatchIdx, :);
-            %find the right subject/trial row
-       
-        for v = 1:length(bySubjVars)
-            varName = bySubjVars(v);
-            if ~isempty(rowMatchSubj) && ismember(varName, rowMatchSubj.Properties.VariableNames)
-                statsRow.(varName) = rowMatchSubj.(varName);
-            else
-                statsRow.(varName) = NaN;
-            end
-        end
-
-
-        trialMatchIdx = strcmp(extraByTrialVars.ID, subjectName) & strcmp(extraByTrialVars.Condition, conditionName);           
-        
-        rowMatchTrial = extraByTrialVars(trialMatchIdx, :);
-            %find the right subject/trial row
-        
-        %  'Subjective' column: normalize all missing/non-Y to "NaN" string
-        subjectiveRaw = string(rowMatchTrial.Subjective);
-            %makes sure value in subjective column is a string
-
-        if ismissing(subjectiveRaw) || subjectiveRaw ~= "Y"
-                %if it's empty or isn't a Y, then makes it a NaN
-            statsRow.Subjective = "NaN";  
-        else
-            statsRow.Subjective = "Y"; %otherwise Y stays Y (right format)
-        end
-        
-        subjectiveVal = statsRow.Subjective;
-
-        statsRow.Order = rowMatchTrial.Order;
-
-
-        statsRow.RR = rowMatchTrial.RR;
-       
-
-
-        %%find rows where subjective=Y and only assign IMI/ISA values for trials w Subjective=Y
-            %reminder: subjTrialVars = ["IMIt", "IMIrelaxed", "IMIattention", "IMIinteresting", "IMItry", "IMIboring", "IMIeffort", "IMIsatisfied", "IMIanxious", "ISA"];
-            %set subejctive column to Y or NaN
-         for v = 1:length(subjTrialVars)
-            varName = subjTrialVars(v);
-            if subjectiveVal == "Y"
-                statsRow.(varName) = rowMatchTrial.(varName);
-            else
-                statsRow.(varName) = NaN;
-            end
-        end
-     
-
-    %%%%11. extracts values for .mat DVs for each trial and add to temp statsRowTable
-        for v = 1:length(matVariables)
-            varName = matVariables{v};
-            if isfield(data, varName) %if that DV exists in .mat file
-                val = data.(varName);
-                if isnumeric(val)
-                    val = val(1); %extract scalar
-                else
-                    val = NaN;
-                end
-            else
-                val = NaN; %if it's not there
-            end
-
-            statsRow.(varName) = val;
-                %adds DV to row
-        end
-
-
+        if exist(trialFile, 'file')
+            data = load(trialFile,matVariables{:});
+                    %load the DVs from the mat files
+            
+       %%%%9 CREATE PER TRIAL ROWS (singleTrialRow) for non DV data that can be mapped to subject ID or trial
+         %(temp-to be added to per subject toAdd table
+            singleTrialRow = struct();
+                %clears it for each trial
+            singleTrialRow.Subject = string(subjectName);
+            singleTrialRow.Trial = t;
+            conditionName = strtrim(string(ConditionMap(t)));
     
-     %%%12.add statsRow table for that subject/trial to addToStatsFormatTable
-        statsRowTable = struct2table(statsRow);
-                %struct2table converts structure array to table so can be merged with addToStatsFormatTable
-        
-        
-     
-        
-        %merge them with separate mergeTables function
-        addToStatsFormatTable = mergeTables(statsRowTable, addToStatsFormatTable);
+            %assign Group 
+            if startsWith(subjectName, 'H')
+                singleTrialRow.Group = "H";
+            elseif startsWith(subjectName, "S")
+                singleTrialRow.Group = "CVA";
+            else
+                warning('subject ID does not belong in either group')
+            end
 
-        end %of if exist (trialfile)
+            %mapping fields:
+            singleTrialRow.Distractor = string(DistractorMap(t));
+            singleTrialRow.SpeedCategory = string(SpeedCategoryMap(t));
+            singleTrialRow.Condition = string(ConditionMap(t));
+
+  %%10 CREATE PER SUBJECT DATA ROWS for extra by subject and by trial variables 
+    %by subject variables:
+
+            subjMatchIdx = strcmp(extraBySubjVars.ID, subjectName) & strcmp(extraBySubjVars.Condition, conditionName);
+            rowMatchSubj = extraBySubjVars(subjMatchIdx, :);
+                %find the right subject/trial row
+           
+            for v = 1:length(bySubjVars)
+                varName = bySubjVars(v);
+                if ~isempty(rowMatchSubj) && ismember(varName, rowMatchSubj.Properties.VariableNames)
+                    singleTrialRow.(varName) = rowMatchSubj.(varName);
+                else
+                    singleTrialRow.(varName) = NaN;
+                end
+            end
+
+    %by trial variables:
+            trialMatchIdx = strcmp(extraByTrialVars.ID, subjectName) & strcmp(extraByTrialVars.Condition, conditionName);           
+            
+            rowMatchTrial = extraByTrialVars(trialMatchIdx, :);
+                %find the right subject/trial row
+        
+         %'Subjective' column: normalize all missing/non-Y to "NaN" string
+            subjectiveRaw = string(rowMatchTrial.Subjective);
+                %makes sure value in subjective column is a string
+    
+            if ismissing(subjectiveRaw) || subjectiveRaw ~= "Y"
+                singleTrialRow.Subjective = "NaN"; 
+                    %if it's empty or isn't a Y, then makes it a NaN
+            else
+                singleTrialRow.Subjective = "Y"; %otherwise Y stays Y
+            end
+                
+         %order column
+            singleTrialRow.Order = rowMatchTrial.Order;
+         
+         %RR column
+            singleTrialRow.RR = rowMatchTrial.RR;
+       
+
+        %subjective variables (IMI, ISA)
+            %%find rows where subjective=Y and only assign IMI/ISA values for these trials
+             for v = 1:length(subjectiveVars)
+                varName = subjectiveVars(v);
+                if singleTrialRow.Subjective == "Y"
+                    singleTrialRow.(varName) = rowMatchTrial.(varName);
+                else
+                    singleTrialRow.(varName) = NaN;
+                end
+            end
+         
+    
+   %%%%11. extracts .mat DVs for each trial and add to temp singleTrialTable
+            for v = 1:length(matVariables)
+                varName = matVariables{v};
+                if isfield(data, varName) %if that DV exists in .mat file
+                    val = data.(varName);
+                    if isnumeric(val)
+                        val = val(1); %extract scalar
+                    else
+                        val = NaN;
+                    end
+                else
+                    val = NaN; %if it's not there
+                end
+    
+                singleTrialRow.(varName) = val;
+                    %adds DV to row
+            end
+
+
+        
+    %%%12.add singleTrialRow table for that subject/trial to singleSubjectDataTable
+         %first use struct2table to converts singleTrialRow struct array to table 
+            singleTrialRowTable = struct2table(singleTrialRow);
+            
+         %merge them with separate mergeTables function
+            singleSubjectDataTable = mergeTables(singleTrialRowTable, singleSubjectDataTable);
+    
+            end 
         end %of trial loop
+% ======= END TRIAL LOOP =======
 
-%%13. add toAdd table to final statsformat ML table
-statsFormatTable = mergeTables(addToStatsFormatTable, statsFormatTable);
+%%13. add singleSubjectDataTable  to  tempIntegratedDataTable
+tempIntegratedDataTable = mergeTables(singleSubjectDataTable, tempIntegratedDataTable);
 
 
 end %of whole subject loop
+% ======= END SUBJECT LOOP =======
 
 %NOW OUTSIDE SUBJECT LOOP:  
 
+%14. add tempIntegratedDataTable to final integratedDataTable
+integratedDataTable = mergeTables(tempIntegratedDataTable, integratedDataTable);
 
-
-%%%14. add SubjS and SubjF rows for each subject 
+%%%15. add SubjectiveS and SubjectiveF rows for each subject 
     %(for subjective correlations with speed)
-         %subjS is slow or slow+ row where subjective = Y
-        %subjF is fast or fast+ row where subjective = Y
-subjList = unique(statsFormatTable.Subject);
+         %subjectiveS is slow or slow+ row where subjective = Y
+        %subjectiveF is fast or fast+ row where subjective = Y
+subjList = unique(integratedDataTable.Subject);
     %grab list of subjects (unique stops dulicate IDs)
 
-% Ensure key columns are string-typed and trimmed or strcmp doesn't work below
-statsFormatTable.Subject = strtrim(string(statsFormatTable.Subject));
-statsFormatTable.Condition = strtrim(string(statsFormatTable.Condition));
-statsFormatTable.Subjective = strtrim(string(statsFormatTable.Subjective));
-
-
+% double checks again that key columns are string-typed and trimmed or strcmp doesn't work below
+integratedDataTable.Subject = strtrim(string(integratedDataTable.Subject));
+integratedDataTable.Condition = strtrim(string(integratedDataTable.Condition));
+integratedDataTable.Subjective = strtrim(string(integratedDataTable.Subjective));
 
 for s = 1:length(subjList) %for each subject
     subj = subjList(s); 
-       
+           
+    % Filter for slow trials with Subjective == "Y"
+    slowSubjTrials = integratedDataTable( ...
+        integratedDataTable.Subject == subj & ...
+        ismember(integratedDataTable.Trial, [4, 5]) & ...
+        integratedDataTable.Subjective == "Y", :);
 
-        %logical index vectors for rows of interest:
-    slowIdx = strcmp(statsFormatTable.Subject, subj) & ...
-              ismember(statsFormatTable.Trial, [4, 5]) & ...
-              statsFormatTable.Subjective == "Y";
-                %strcmp compares subject name
-                %ismember checks if its one of the slow conditions       
-    fastIdx = strcmp(statsFormatTable.Subject, subj) & ...
-              ismember(statsFormatTable.Trial, [6, 7]) & ...
-              statsFormatTable.Subjective == "Y";
-                %strcmp compares subject name
-                %ismember checks if its one of the fast conditions
+    % Filter for fast trials with Subjective == "Y"
+    fastSubjTrials = integratedDataTable( ...
+        integratedDataTable.Subject == subj & ...
+        ismember(integratedDataTable.Trial, [6, 7]) & ...
+        integratedDataTable.Subjective == "Y", :);
 
+    % --- Add subjectiveS (4 or 5 with subj Y
+    if ~isempty(slowSubjTrials)
+        subjectiveSRow = slowSubjTrials(1, :); % take the first valid one (only one will exist)
+        subjectiveSRow.Condition = "subjectiveS";
+        subjectiveSRow.Trial = 4.5;
+        integratedDataTable = mergeTables(subjectiveSRow, integratedDataTable);
+    end
 
-    %finding and adding those rows
-    for s = 1:length(subjList)
-        subj = subjList(s);
-    
-        % Filter for slow trials with Subjective == "Y"
-        slowSubjTrials = statsFormatTable( ...
-            statsFormatTable.Subject == subj & ...
-            ismember(statsFormatTable.Trial, [4, 5]) & ...
-            statsFormatTable.Subjective == "Y", :);
-    
-        % Filter for fast trials with Subjective == "Y"
-        fastSubjTrials = statsFormatTable( ...
-            statsFormatTable.Subject == subj & ...
-            ismember(statsFormatTable.Trial, [6, 7]) & ...
-            statsFormatTable.Subjective == "Y", :);
-    
-        % --- Add subjS (4 or 5 with subj Y
-        if ~isempty(slowSubjTrials)
-            subjSRow = slowSubjTrials(1, :); % take the first valid one (only one will exist)
-            subjSRow.Condition = "subjS";
-            subjSRow.Trial = 4.5;
-            statsFormatTable = mergeTables(subjSRow, statsFormatTable);
-        end
-    
-        % --- Add subjF (6 or 7 with subj Y)
-        if ~isempty(fastSubjTrials)
-            subjFRow = fastSubjTrials(1, :); % again, only one should match
-            subjFRow.Condition = "subjF";
-            subjFRow.Trial = 6.5;
-            statsFormatTable = mergeTables(subjFRow, statsFormatTable);
-        end
+    % --- Add subjectiveF (6 or 7 with subj Y)
+    if ~isempty(fastSubjTrials)
+        subjectiveFRow = fastSubjTrials(1, :); % again, only one should match
+        subjectiveFRow.Condition = "subjectiveF";
+        subjectiveFRow.Trial = 6.5;
+        integratedDataTable = mergeTables(subjectiveFRow, integratedDataTable);
     end
 end
 
        
-%15 manually adjust some variables for certain trials and add normalized DVs:
+%16 manually adjust some variables for certain trials and add normalized DVs:
 
  %make MeanAccuracy  NaN for all trial 1 (baseline) rows
-if any(statsFormatTable.Trial == 1)
-    statsFormatTable.MeanAccuracy(statsFormatTable.Trial == 1) = NaN;
+if any(integratedDataTable.Trial == 1)
+    integratedDataTable.MeanAccuracy(integratedDataTable.Trial == 1) = NaN;
 end
     
  %add columns for 
@@ -355,80 +340,113 @@ end
 
     %first create new columns 
         %for norm_BL:
-statsFormatTable.HR_normBL = NaN(height(statsFormatTable),1);
-statsFormatTable.Percent_HR_Max = NaN(height(statsFormatTable),1);
-statsFormatTable.Pupil_normBL = NaN(height(statsFormatTable),1);
-statsFormatTable.RR_normBL = NaN(height(statsFormatTable),1);
+integratedDataTable.HR_normBL = NaN(height(integratedDataTable),1);
+integratedDataTable.Percent_HR_Max = NaN(height(integratedDataTable),1);
+integratedDataTable.Pupil_normBL = NaN(height(integratedDataTable),1);
+integratedDataTable.RR_normBL = NaN(height(integratedDataTable),1);
         %for raw change from BL:
-statsFormatTable.Delta_HR_BL = NaN(height(statsFormatTable),1);
-statsFormatTable.Delta_Pupil_BL = NaN(height(statsFormatTable),1);
-statsFormatTable.Delta_RR_BL = NaN(height(statsFormatTable),1);
+integratedDataTable.Delta_HR_BL = NaN(height(integratedDataTable),1);
+integratedDataTable.Delta_Pupil_BL = NaN(height(integratedDataTable),1);
+integratedDataTable.Delta_RR_BL = NaN(height(integratedDataTable),1);
         %for z scores:
-statsFormatTable.z_HeartRate = NaN(height(statsFormatTable),1);
-statsFormatTable.z_Pupil = NaN(height(statsFormatTable),1);
-statsFormatTable.z_RR = NaN(height(statsFormatTable),1);
+integratedDataTable.z_HeartRate = NaN(height(integratedDataTable),1);
+integratedDataTable.z_Pupil = NaN(height(integratedDataTable),1);
+integratedDataTable.z_RR = NaN(height(integratedDataTable),1);
 
 
-subjects = unique(statsFormatTable.Subject);
+subjects = unique(integratedDataTable.Subject);
 
-%
+
 for s = 1:length(subjects)
     subj = subjects(s);
+    
+
     % Grab all this subject's rows
-    subjIdx = statsFormatTable.Subject == subj;
+    subjIdx = integratedDataTable.Subject == subj;
+            %all rows for that subject
+    baselineIdx = subjIdx & integratedDataTable.Trial == 1;
+            % trial 1 rows for that subject only
+    normTrialIdx = subjIdx & integratedDataTable.Trial ~= 1;
+            %all other rows but trial 1 for that subject
 
-    %variables of interest:
-    subjHR = statsFormatTable.MeanHeartRate(subjIdx);
-    subjPupil = statsFormatTable.MeanPupilDiameter(subjIdx);
-    subjRR = statsFormatTable.RR(subjIdx);
 
-    %%% Baseline values 
-    baselineIdx = subjIdx & statsFormatTable.Trial == 1;
-    if ~any(baselineIdx) %if BL is missing (like S1), set all normBL values to NaN
-        statsFormatTable.HR_normBL(subjIdx) = NaN;
-        statsFormatTable.Pupil_normBL(subjIdx) = NaN;
-        statsFormatTable.RR_normBL(subjIdx) = NaN;
-        statsFormatTable.Percent_HR_Max(subjIdx) = NaN;
-        continue;
+    % all rows DV values for that subject):
+    subjHR = integratedDataTable.MeanHeartRate(subjIdx);
+    subjPupil = integratedDataTable.MeanPupilDiameter(subjIdx);
+    subjRR = integratedDataTable.RR(subjIdx);
+
+    %baseline DV values (trial 1):
+    HR_baseline = integratedDataTable.MeanHeartRate(baselineIdx);
+    Pupil_baseline = integratedDataTable.MeanPupilDiameter(baselineIdx);
+    RR_baseline = integratedDataTable.RR(baselineIdx);
+
+    % do BL normalizations
+    if any(baselineIdx) % if baseline exists
+        % Define DVs, normalized columns, and delta columns
+        DVs = ["MeanHeartRate", "MeanPupilDiameter", "RR"];
+        NormCols = ["HR_normBL", "Pupil_normBL", "RR_normBL"];
+        DeltaCols = ["Delta_HR_BL", "Delta_Pupil_BL", "Delta_RR_BL"];
+    
+        % loop through HR, pupil, and RR to do norm and raw delta columns:
+        for d = 1:length(DVs)
+            dv = DVs(d);
+            normCol = NormCols(d);
+            deltaCol = DeltaCols(d);
+    
+            integratedDataTable.(normCol)(normTrialIdx) = integratedDataTable.(dv)(normTrialIdx) ./ integratedDataTable.(dv)(baselineIdx);
+            integratedDataTable.(deltaCol)(normTrialIdx) = integratedDataTable.(dv)(normTrialIdx) - integratedDataTable.(dv)(baselineIdx);
+        end
+
+    else %if no baseline, all normalized/delta columns are NaN
+        integratedDataTable.HR_normBL(subjIdx) = NaN;
+        integratedDataTable.Pupil_normBL(subjIdx) = NaN;
+        integratedDataTable.RR_normBL(subjIdx) = NaN;
+        integratedDataTable.Delta_HR_BL(subjIdx) = NaN;
+        integratedDataTable.Delta_Pupil_BL(subjIdx) = NaN;
+        integratedDataTable.Delta_RR_BL(subjIdx) = NaN;
+    %and trial 1 is left as NaN
     end
-    HR_baseline = statsFormatTable.MeanHeartRate(baselineIdx);
-    Pupil_baseline = statsFormatTable.MeanPupilDiameter(baselineIdx);
-    RR_baseline = statsFormatTable.RR(baselineIdx);
-    Age = statsFormatTable.Age(baselineIdx);
 
-
-    normTrialIdx = subjIdx & statsFormatTable.Trial ~= 1;
-    %for all trials but trial 1 (normTrialIdx), add columns norm to BL for DVs:
-    statsFormatTable.HR_normBL(normTrialIdx) = statsFormatTable.MeanHeartRate(normTrialIdx) / HR_baseline;
-    statsFormatTable.Pupil_normBL(normTrialIdx) = statsFormatTable.MeanPupilDiameter(normTrialIdx) / Pupil_baseline;
-    statsFormatTable.RR_normBL(normTrialIdx) = statsFormatTable.RR(normTrialIdx) / RR_baseline;
-
-    %for all trials but trial 1 (normTrialIdx), add columns change from BL for DVs:
-    statsFormatTable.Delta_HR_BL(normTrialIdx) = statsFormatTable.MeanHeartRate(normTrialIdx) - HR_baseline;
-    statsFormatTable.Delta_Pupil_BL(normTrialIdx) = statsFormatTable.MeanPupilDiameter(normTrialIdx) - Pupil_baseline;
-    statsFormatTable.Delta_RR_BL(normTrialIdx) = statsFormatTable.RR(normTrialIdx) - RR_baseline;
 
     %for all trials (subjIdx), add %age adjusted HRmax for HR values
-    maxHR = 220 - Age;
-    statsFormatTable.Percent_HR_Max(subjIdx) = (statsFormatTable.MeanHeartRate(subjIdx) ./ maxHR) * 100;
+    Age = integratedDataTable.Age(find(subjIdx,1));
+    if ~isnan(Age)
+        maxHR = 220 - Age;
+        integratedDataTable.Percent_HR_Max(subjIdx) = (integratedDataTable.MeanHeartRate(subjIdx) ./ maxHR) * 100;
+    end  
 
     %for all trials (subjIdx), add zscores
+
+
     if sum(~isnan(subjHR)) > 1 %(ie if have at least 1 HR value across trials)
-        statsFormatTable.z_HeartRate(subjIdx) = (subjHR - nanmean(subjHR)) / nanstd(subjHR);
+        integratedDataTable.z_HeartRate(subjIdx) = (subjHR - nanmean(subjHR)) / nanstd(subjHR);
             %nanmean = avg of HRs across all trials (-NaNs)
             %nanSD = SD across all trials (-NaNs)
     end
     if sum(~isnan(subjPupil)) > 1
-        statsFormatTable.z_Pupil(subjIdx) = (subjPupil - nanmean(subjPupil)) / nanstd(subjPupil);
+        integratedDataTable.z_Pupil(subjIdx) = (subjPupil - nanmean(subjPupil)) / nanstd(subjPupil);
     end
     if sum(~isnan(subjRR)) > 1
-        statsFormatTable.z_RR(subjIdx) = (subjRR - nanmean(subjRR)) / nanstd(subjRR);
+        integratedDataTable.z_RR(subjIdx) = (subjRR - nanmean(subjRR)) / nanstd(subjRR);
     end
-
 end
 
-%%% 16 organize and save updated .mat file
-statsFormatTable = sortrows(statsFormatTable, {'Subject','Trial'});
 
-save(matOutputFile, 'statsFormatTable');
+%%% 17 organize and save updated .mat file
+
+% Reorder integratedDataTable columns
+coreCols = ["Subject", "Trial", "Condition"];
+matCols = matVariables;
+trialCols = byTrialVars;
+subjCols = bySubjVars;
+% Combine in desired order
+desiredOrder = [coreCols, matCols, trialCols, subjCols];
+% Get any remaining columns not already included
+existingCols = integratedDataTable.Properties.VariableNames;
+remainingCols = setdiff(existingCols, desiredOrder, 'stable');
+
+% Final reordered table
+integratedDataTable = integratedDataTable(:, [desiredOrder, remainingCols]);
+
+save(matOutputFile, 'integratedDataTable');
 
