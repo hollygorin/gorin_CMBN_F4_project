@@ -1,8 +1,7 @@
-% DESCRIPTION: Export the long-format masterDataTable.mat file as:
+% DESCRIPTION: Export the long-format integratedDataTable.mat file as:
     %CSV (long format)
     %Excel (wide format, one sheet per DV) (for quick looks and use with lab)
-    %Or both
-
+    
 thesisDataAnalysisSettings;  % call script with directories/variables
 
 outputDir = dataTablesFolderDir;
@@ -16,20 +15,14 @@ csvOut = fullfile(outputDir, 'dataLongFormat.csv');
 excelOut = fullfile(outputDir, 'dataWideFormat.xlsx');
 
 %3. SAVE FORMAT SELECTION
-%pick whether to save to dataWideFormat.xlsx, to dataLongFormat.csv, or both
-fprintf('1 = Only long format .csv file \n');
-fprintf('2 = Only wide format excel file \n');
-fprintf('3 = Both \n');
-saveChoice = input('1, 2, or 3): ');
-
-saveCSV  = ismember(saveChoice, [1, 3]);
-saveXLSX = ismember(saveChoice, [2, 3]);
+saveCSV = true;
+saveXLSX = true;
 
 
 %3 write to dataLongFormat.csv  
 if saveCSV
     if isfile(csvOut)
-        existingTable = readtable(csvOut);
+        existingTable = readtable(csvOut, 'VariableNamingRule', 'preserve');
             %loads existing output file
     
         %make sure matlab table and excel table are same type to avoid errors merging:
@@ -118,6 +111,13 @@ if saveXLSX
             %confirm trial order is string just like column names
         colsToKeep = intersect(colOrder, wide.Properties.VariableNames, 'stable');
             %picks trials to keep
+
+        %warn if any expected trials are missing in the wide table
+        missingTrials = setdiff(colOrder, wide.Properties.VariableNames);
+        if ~isempty(missingTrials)
+            warning('Missing trials for variable %s in export: %s', thisVar, strjoin(missingTrials, ', '));
+        end
+
         wide = wide(:, colsToKeep);
 
         % Save to byDV's Excel sheet
@@ -155,7 +155,6 @@ if saveXLSX
             commonCols = intersect(existing.Properties.VariableNames, wide.Properties.VariableNames, 'stable');
             existing = existing(:, commonCols);
             wide = wide(:, commonCols);
-            updated = [existing; wide];
         end
 
 
@@ -177,4 +176,3 @@ if saveXLSX
 end
 
     
- %of if save excel

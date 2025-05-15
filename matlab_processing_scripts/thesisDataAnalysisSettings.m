@@ -1,7 +1,7 @@
-%thesisDataAnalysisSettings
-    %loads important paths, constants, and settings
+%thesisDataAnalysisSettings script
+    %contains important paths/files, constants, settings, variables, speed condition grouings, data subtables, 
     %called in (as of 4/28/25): 
-        %createSubjectIDMap.m, selectTrials.m,trimming.m, extractAll.m, exportDatatoFiles.m, simpleStatsComparisons.m, visualizeDataInd
+        %selectTrials.m, trimming.m, extractAll.m, exportDatatoFiles.m, simpleStatsComparisons.m, visualizeDataInd
 
 
 %DIRECTORIES:
@@ -11,6 +11,9 @@ rootThesisDir = '/Users/holly/Library/CloudStorage/OneDrive-RutgersUniversity(2)
 rawDataFolderDir = fullfile(rootThesisDir, 'RawData');
 dataTablesFolderDir = fullfile(rootThesisDir, 'gorin_CMBN_F4_project', 'DataTables');
 dataFiguresFolderDir = fullfile(rootThesisDir, 'gorin_CMBN_F4_project', 'DataFigures');
+
+%integrated data table (to make subtables from)
+load(fullfile(dataTablesFolderDir, 'integratedDataTable.mat'));
 
 %files:
 extraByTrialVarsDir = fullfile(dataTablesFolderDir, 'extraByTrialVars.csv');
@@ -30,6 +33,11 @@ startKeepTime = 29999; %time frame from beginning to cut out
 endTimeLow = 210510; %time to cut from there on (low range) xxxxx0
 endTimeHigh = 210519; %time to cut from there on (high range) xxxxx9
 
+%respiratory processing
+    %RR bandpass filter settings:
+        RRfilterLow = 0.05;
+        RRfilterHigh = 0.7;
+        %0.05-0.7 --> RR of 3-42bpm
 
 %separate out trials/conditions
 fixedSpeedTrials = [1, 4, 5, 8, 6, 7];
@@ -37,6 +45,15 @@ fixedSpeedTrials = [1, 4, 5, 8, 6, 7];
 %algTrials = [3, 9];
 fixedSpeedConditionsWithBL = ["baseline", "slow", "mod", "fast"];
 fixedSpeedConditionsNoBL = ["slow", "mod", "fast"];
+
+%subtables by condition:
+TablefixedSpeedConditionsWithBL = integratedDataTable(ismember(integratedDataTable.Condition, fixedSpeedConditionsWithBL), :);
+TablefixedSpeedConditionsNoBL = integratedDataTable(ismember(integratedDataTable.Condition, fixedSpeedConditionsNoBL), :);
+
+%DV category list:
+DVraw = {'MeanHeartRate', 'MeanPupilDiameter', 'RR'};
+DVnormBL = {'HR_normBL', 'Pupil_normBL', 'RR_normBL'};
+DVall = {'MeanHeartRate', 'Percent_HR_Max', 'HR_normBL', 'MeanPupilDiameter', 'Pupil_normBL', 'RR_normBL', 'RD'};
 
 
 %variables in extractall --> integratedDataTable
@@ -53,10 +70,12 @@ fixedSpeedConditionsNoBL = ["slow", "mod", "fast"];
     bySubjVars = ["BetaBlocker", "Sex", "DomHand", "BBTdom", "BBTnondom", "MOCA", "Lenses", "Age", "AffHand", "Chronicity", "FMA", "BBTa",	"BBTu"];
         %subject intake form and clinical testing
         %pulled in from extraBySubjVariables.csv
+    mappingVars = ["Trial", "Group", "SpeedCategory", "Distractor", "Condition"];
     subjectiveVars = ["IMIt", "IMIrelaxed", "IMIattention", "IMIinteresting", "IMItry", "IMIboring", "IMIeffort", "IMIsatisfied", "IMIanxious", "ISA"];
-    byTrialVars = ["Subjective", subjectiveVars, "Order", "RR"];
+    byTrialVars = ["Subjective", subjectiveVars, "Order"];
         %subjective assessments, order trials were administered, RR (DV analyzed separtely and not in .mat files)
         %pulled in from extraByTrialVariables.csv
+    biopacVars = ["RR", "RD", "peakRD", "HRnew"];
 
 
 %graphing:

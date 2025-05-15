@@ -1,7 +1,9 @@
-%this script takes raw data .csv files and cuts out the first 30 seconds
+%trimming.m
+%this script takes raw data .csv files (pupil, accuracy, speed data) and cuts out the first 30 seconds
 %and anything past 210 seconds (ie: cuts the data down to 3 minutes). It
 %then saves the trimmed data in a new .csv file with matching column
-%headers
+%headers (so compatible with existing filtering/pre-processing script (not included in this repository)
+
 
 thesisDataAnalysisSettings;  % call script with directories/variables
     %defines startKeepTime, endTimeLow, and endTimeHigh
@@ -15,18 +17,16 @@ thesisDataAnalysisSettings;  % call script with directories/variables
 
 rootDir = rawDataFolderDir;
 
-%get map from createSubjectIDMap function
-subjectMap = createSubjectIDMap();
 
 %select subjects to process using selectSubject function and prompt for
 %input
 subjInput = input('Enter subject IDs (ie H1, S5...) or press Enter to select all: ', 's');
 if isempty(subjInput)
-    selectedSubjects = selectSubject();  % all subjects
+    [selectedSubjects, subjectMap] = selectSubject();  % all subjects
 else
     subjInputFormatted = strsplit(strrep(subjInput, ' ', ''), ',');
         %strsplit splits by spaces
-    selectedSubjects = selectSubject(subjInputFormatted);  % specific ones
+    [selectedSubjects, subjectMap] = selectSubject(subjInputFormatted);  % specific ones
 end
 
 for i = 1:length(selectedSubjects)
